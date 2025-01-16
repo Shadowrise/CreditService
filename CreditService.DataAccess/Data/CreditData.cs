@@ -16,20 +16,19 @@ class CreditData: DataBase, ICreditData
     {
         using var con = Database.CreateConnection();
         
-        var query = new CommandDefinition(
-            """
-                SELECT C.CreditID,
-                       C.CreditNumber, 
-                       C.ClientName, 
-                       C.RequestedAmount, 
-                       C.CreditRequestDate, 
-                       C.CreditStatus,
-                       I.CreditID,
-                       I.InvoiceNumber,
-                       I.InvoiceAmount
-                FROM Credit C
-                LEFT JOIN Invoice I ON C.CreditID = I.CreditID
-            """, cancellationToken: cancellationToken);
+        var query = new CommandDefinition("""
+            SELECT C.CreditID,
+                   C.CreditNumber, 
+                   C.ClientName, 
+                   C.RequestedAmount, 
+                   C.CreditRequestDate, 
+                   C.CreditStatus,
+                   I.CreditID,
+                   I.InvoiceNumber,
+                   I.InvoiceAmount
+            FROM Credit C
+            LEFT JOIN Invoice I ON C.CreditID = I.CreditID
+        """, cancellationToken: cancellationToken);
         
         var creditsDict = new Dictionary<string, Credit>();
         await con.QueryAsync<Credit, Invoice, Credit>(
@@ -58,18 +57,17 @@ class CreditData: DataBase, ICreditData
     {
         using var con = Database.CreateConnection();
         
-        var query = new CommandDefinition(
-            """
-                SELECT 
-                    SUM(CASE WHEN CreditStatus = 'Paid' THEN RequestedAmount ELSE 0 END) AS TotalPaid,
-                    SUM(CASE WHEN CreditStatus = 'AwaitingPayment' THEN RequestedAmount ELSE 0 END) AS TotalAwaitingPayment,
-                    (SUM(CASE WHEN CreditStatus = 'Paid' THEN RequestedAmount ELSE 0 END) * 100.0 / 
-                     SUM(CASE WHEN CreditStatus IN ('Paid', 'AwaitingPayment') THEN RequestedAmount ELSE 0 END)) AS PercentagePaid,
-                    (SUM(CASE WHEN CreditStatus = 'AwaitingPayment' THEN RequestedAmount ELSE 0 END) * 100.0 / 
-                     SUM(CASE WHEN CreditStatus IN ('Paid', 'AwaitingPayment') THEN RequestedAmount ELSE 0 END)) AS PercentageAwaitingPayment
-                FROM Credit
-                WHERE CreditStatus IN ('Paid', 'AwaitingPayment');
-            """, cancellationToken: cancellationToken);
+        var query = new CommandDefinition("""
+            SELECT 
+                SUM(CASE WHEN CreditStatus = 'Paid' THEN RequestedAmount ELSE 0 END) AS TotalPaid,
+                SUM(CASE WHEN CreditStatus = 'AwaitingPayment' THEN RequestedAmount ELSE 0 END) AS TotalAwaitingPayment,
+                (SUM(CASE WHEN CreditStatus = 'Paid' THEN RequestedAmount ELSE 0 END) * 100.0 / 
+                 SUM(CASE WHEN CreditStatus IN ('Paid', 'AwaitingPayment') THEN RequestedAmount ELSE 0 END)) AS PercentagePaid,
+                (SUM(CASE WHEN CreditStatus = 'AwaitingPayment' THEN RequestedAmount ELSE 0 END) * 100.0 / 
+                 SUM(CASE WHEN CreditStatus IN ('Paid', 'AwaitingPayment') THEN RequestedAmount ELSE 0 END)) AS PercentageAwaitingPayment
+            FROM Credit
+            WHERE CreditStatus IN ('Paid', 'AwaitingPayment');
+        """, cancellationToken: cancellationToken);
         
         var data = await con.QueryFirstAsync<CreditsOverviewByStatus>(query);
 

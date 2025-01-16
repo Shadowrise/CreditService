@@ -77,18 +77,18 @@ public class CreditDataTests: DataTestsBase
         // Arrange
         using var con = Database.CreateConnection();
         await con.ExecuteAsync("""
-                                   INSERT INTO Credit (CreditNumber, ClientName, RequestedAmount, CreditRequestDate, CreditStatus) VALUES
-                                       ('CR-001', 'Alice Johnson', 1000.00, '2025-01-01', 'Paid'),
-                                       ('CR-002', 'Bob Smith', 2000.00, '2025-01-02', 'Paid'),
-                                       ('CR-003', 'Charlie Brown', 3000.00, '2025-01-03', 'AwaitingPayment'),
-                                       ('CR-004', 'Diana Prince', 4000.00, '2025-01-04', 'AwaitingPayment')
-                               """);
+            INSERT INTO Credit (CreditNumber, ClientName, RequestedAmount, CreditRequestDate, CreditStatus) VALUES
+                ('CR-001', 'Alice Johnson', 1000.00, '2025-01-01', 'Paid'),
+                ('CR-002', 'Bob Smith', 2000.00, '2025-01-02', 'Paid'),
+                ('CR-003', 'Charlie Brown', 3000.00, '2025-01-03', 'AwaitingPayment'),
+                ('CR-004', 'Diana Prince', 4000.00, '2025-01-04', 'AwaitingPayment')
+        """);
         
         await con.ExecuteAsync("""
-                                   INSERT INTO Invoice (InvoiceNumber, InvoiceAmount, CreditID) VALUES
-                                       ('INV-001', 1000.00, 1),
-                                       ('INV-002', 2000.00, 1)
-                               """);
+            INSERT INTO Invoice (InvoiceNumber, InvoiceAmount, CreditID) VALUES
+                ('INV-001', 1000.00, 1),
+                ('INV-002', 2000.00, 1)
+        """);
         
         // Arrange
         var target = new CreditData(Database);
