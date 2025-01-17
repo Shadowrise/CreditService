@@ -1,6 +1,8 @@
 using CreditService.Application.Interfaces.Data;
 using CreditService.Domain.Entities;
 using CreditService.Infrastructure.Database;
+using CreditService.Infrastructure.Mappers;
+using CreditService.Infrastructure.Models;
 using Dapper;
 using OperationResult;
 
@@ -17,38 +19,44 @@ class CreditData: DataBase, ICreditData
         using var con = Database.CreateConnection();
         
         var query = new CommandDefinition("""
-            SELECT C.CreditID,
-                   C.CreditNumber, 
+            SELECT C.CreditNumber, 
                    C.ClientName, 
                    C.RequestedAmount, 
                    C.CreditRequestDate, 
                    C.CreditStatus,
-                   I.CreditID,
                    I.InvoiceNumber,
                    I.InvoiceAmount
             FROM Credit C
             LEFT JOIN Invoice I ON C.CreditID = I.CreditID
         """, cancellationToken: cancellationToken);
         
+        var rows = await con.QueryAsync<CreditWithInvoiceRow>(query);
+        
         var creditsDict = new Dictionary<string, Credit>();
-        await con.QueryAsync<Credit, Invoice, Credit>(
-            query,
-            (credit, invoice) =>
+        foreach (var row in rows)
+        {
+            if (!creditsDict.TryGetValue(row.CreditNumber, out var credit))
             {
-                if (!creditsDict.TryGetValue(credit.CreditNumber, out var creditEntry))
+                credit = new Credit()
                 {
-                    creditEntry = credit;
-                    creditsDict.Add(creditEntry.CreditNumber, creditEntry);
-                }
+                    CreditNumber = row.CreditNumber,
+                    ClientName = row.ClientName,
+                    RequestedAmount = CurrencyMapper.FromDb(row.RequestedAmount),
+                    CreditRequestDate = row.CreditRequestDate,
+                    CreditStatus = row.CreditStatus
+                };
+                creditsDict.Add(credit.CreditNumber, credit);
+            }
 
-                if (invoice.InvoiceNumber != null)
+            if (row.InvoiceNumber != null)
+            {
+                credit.Invoices.Add(new Invoice()
                 {
-                    creditEntry.Invoices.Add(invoice);   
-                }
-                
-                return credit;
-            },
-            splitOn: "CreditID");
+                    InvoiceNumber = row.InvoiceNumber,
+                    InvoiceAmount = CurrencyMapper.FromDb(row.InvoiceAmount!.Value),
+                });   
+            }
+        }
         
         return creditsDict.Values;
     }
@@ -69,8 +77,15 @@ class CreditData: DataBase, ICreditData
             WHERE CreditStatus IN ('Paid', 'AwaitingPayment');
         """, cancellationToken: cancellationToken);
         
-        var data = await con.QueryFirstAsync<CreditsOverviewByStatus>(query);
+        var rows = await con.QueryFirstAsync<CreditsOverviewByStatusRow>(query);
+        var creditsOverviewByStatus = new CreditsOverviewByStatus()
+        {
+            TotalPaid = CurrencyMapper.FromDb(rows.TotalPaid),
+            TotalAwaitingPayment = CurrencyMapper.FromDb(rows.TotalAwaitingPayment),
+            PercentagePaid = Math.Round(rows.PercentagePaid, 2),
+            PercentageAwaitingPayment = Math.Round(rows.PercentageAwaitingPayment, 2)
+        };
 
-        return data;
+        return creditsOverviewByStatus;
     }
 }
